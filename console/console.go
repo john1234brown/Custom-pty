@@ -39,7 +39,11 @@ func (c *console) Start(dir string, command []string) error {
 	} else if err := os.Chdir(dir); err != nil {
 		return err
 	}
-	cmd, err := c.buildCmd(command)
+	// Sanitize the command arguments
+    	sanitizedCommand := sanitizeCommand(command)
+
+    	// Other existing code...
+    	cmd, err := c.buildCmd(sanitizedCommand)
 	if err != nil {
 		return err
 	}
@@ -55,6 +59,12 @@ func (c *console) Start(dir string, command []string) error {
 	c.stdErr = nil
 	c.file = f
 	return nil
+}
+
+func sanitizeCommand(command []string) []string {
+    // Implement your sanitization logic here
+    // For example, remove any characters or commands that are not allowed
+    // and return the sanitized command arguments
 }
 
 func (c *console) buildCmd(args []string) (*exec.Cmd, error) {
