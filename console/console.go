@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"syscall"
-	"fmt"
         "regexp"
         "strings"
 
@@ -42,11 +41,17 @@ func (c *console) Start(dir string, command []string) error {
 	} else if err := os.Chdir(dir); err != nil {
 		return err
 	}
-	// Sanitize the command arguments
-    	sanitizedCommand := sanitizeCommand(command)
+	// Split the command string into arguments
+    	commandArgs := strings.Fields(command)
+    
+    	// Sanitize the command arguments
+    	sanitizedArgs := make([]string, len(commandArgs))
+    	for i, arg := range commandArgs {
+        	sanitizedArgs[i] = sanitizeCommand(arg)
+    	}
 
     	// Other existing code...
-    	cmd, err := c.buildCmd(sanitizedCommand)
+    	cmd, err := c.buildCmd(sanitizedArgs)
 	if err != nil {
 		return err
 	}
@@ -64,26 +69,26 @@ func (c *console) Start(dir string, command []string) error {
 	return nil
 }
 
-func sanitizeCommand(command string) string {
+func sanitizeCommand(arg string) string {
     // Remove control characters and non-printable characters
     re := regexp.MustCompile(`[\x00-\x1F\x7F-\x9F]`)
-    command = re.ReplaceAllString(command, "")
+    arg = re.ReplaceAllString(arg, "")
 
     // Remove special characters that could be used in exploits
-    command = strings.ReplaceAll(command, "|", "")
-    command = strings.ReplaceAll(command, "`", "")
-    command = strings.ReplaceAll(command, "\\", "")
+    arg = strings.ReplaceAll(arg, "|", "")
+    arg = strings.ReplaceAll(arg, "`", "")
+    arg = strings.ReplaceAll(arg, "\\", "")
 
     // Prevent path traversal attacks by removing '..'
-    command = strings.ReplaceAll(command, "..", "")
+    arg = strings.ReplaceAll(arg, "..", "")
 
     // Remove escaped character sequences like \xHH and \uHHHH
     re = regexp.MustCompile(`\\([0-9a-fA-F]{2})`)
-    command = re.ReplaceAllString(command, "")
+    arg = re.ReplaceAllString(arg, "")
 
     // Remove Unicode escape sequences like \uHHHH
     re = regexp.MustCompile(`\\u([0-9a-fA-F]{4})`)
-    command = re.ReplaceAllString(command, "")
+    arg = re.ReplaceAllString(arg, "")
 
     // Remove specific dangerous commands
     dangerousCommands := []string{
@@ -96,10 +101,10 @@ func sanitizeCommand(command string) string {
     }
 
     for _, dc := range dangerousCommands {
-        command = strings.ReplaceAll(command, dc, "")
+        arg = strings.ReplaceAll(arg, dc, "")
     }
 
-    return command
+    return arg
 }
 
 func (c *console) buildCmd(args []string) (*exec.Cmd, error) {
