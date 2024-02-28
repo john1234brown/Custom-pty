@@ -9,6 +9,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"syscall"
+	"fmt"
+        "regexp"
+        "strings"
 
 	"github.com/MCSManager/pty/console/iface"
 	"github.com/MCSManager/pty/utils"
@@ -61,10 +64,42 @@ func (c *console) Start(dir string, command []string) error {
 	return nil
 }
 
-func sanitizeCommand(command []string) []string {
-    // Implement your sanitization logic here
-    // For example, remove any characters or commands that are not allowed
-    // and return the sanitized command arguments
+func sanitizeCommand(command string) string {
+    // Remove control characters and non-printable characters
+    re := regexp.MustCompile(`[\x00-\x1F\x7F-\x9F]`)
+    command = re.ReplaceAllString(command, "")
+
+    // Remove special characters that could be used in exploits
+    command = strings.ReplaceAll(command, "|", "")
+    command = strings.ReplaceAll(command, "`", "")
+    command = strings.ReplaceAll(command, "\\", "")
+
+    // Prevent path traversal attacks by removing '..'
+    command = strings.ReplaceAll(command, "..", "")
+
+    // Remove escaped character sequences like \xHH and \uHHHH
+    re = regexp.MustCompile(`\\([0-9a-fA-F]{2})`)
+    command = re.ReplaceAllString(command, "")
+
+    // Remove Unicode escape sequences like \uHHHH
+    re = regexp.MustCompile(`\\u([0-9a-fA-F]{4})`)
+    command = re.ReplaceAllString(command, "")
+
+    // Remove specific dangerous commands
+    dangerousCommands := []string{
+        "rm -r /", "rm -R /", "rm -rf /", "rm -Rf /",
+        "rm -r -f /", "rm -R -f /", "rm -r -R /", "rm -rf -r /",
+        "rm -r -rf /", "rm -Rf -r /", "rm -R -rf /", "rm -r -f -R /",
+        "rm -R -f -r /", "rm -r -R -f /", "rm -rf -r -R /", "rm -r -rf -R /",
+        "rm -Rf -r -f /", "rm -R -rf -r /", "rm -r -f -R -f /", "rm -R -f -r -f /",
+        "sh", "sudo", "mv /", "chmod -R 777", "chown -R", "dd if=/dev/zero", "mkfs",
+    }
+
+    for _, dc := range dangerousCommands {
+        command = strings.ReplaceAll(command, dc, "")
+    }
+
+    return command
 }
 
 func (c *console) buildCmd(args []string) (*exec.Cmd, error) {
