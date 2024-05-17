@@ -1,4 +1,11 @@
 
+# Modifications to the app include
+- Currently Nothing
+- Plan to eventually learn Go enough to implement sanitizer on the pty to bring it back as well!
+
+
+
+
 # Pseudo-teletype App
 
 [![--](https://img.shields.io/badge/Go_Version-1.19-green.svg)](https://github.com/MCSManager)
